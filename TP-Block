@@ -1,0 +1,125 @@
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer-- =========================
+-- Krimo Hub | Teleport + Auto Block
+-- =========================
+local StarterGui = game:GetService("StarterGui")
+local UserInputService = game:GetService("UserInputService")
+
+local backpack = player:WaitForChild("Backpack")
+local char = player.Character or player.CharacterAdded:Wait()
+local humanoid = char:WaitForChild("Humanoid")
+local hrp = char:WaitForChild("HumanoidRootPart")
+
+-- GUI Setup
+local ScreenGui = Instance.new("ScreenGui", player.PlayerGui)
+ScreenGui.Name = "krimo hub"
+ScreenGui.ResetOnSpawn = false
+
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0, 220, 0, 220)
+Frame.Position = UDim2.new(0.5, -110, 0.5, -110)
+Frame.BackgroundColor3 = Color3.fromRGB(2,2,2)
+Frame.Active = true
+Frame.Draggable = true
+Frame.BorderSizePixel = 0
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 15)
+
+local Stroke = Instance.new("UIStroke", Frame)
+Stroke.Color = Color3.fromRGB(255,255,255)
+Stroke.Thickness = 1
+
+local Title = Instance.new("TextLabel", Frame)
+Title.Size = UDim2.new(1, -20, 0, 35)
+Title.Position = UDim2.new(0, 10, 0, 10)
+Title.Text = "Krimo hub"
+Title.TextColor3 = Color3.new(1,1,1)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 18
+Title.BackgroundTransparency = 1
+Title.TextXAlignment = Enum.TextXAlignment.Center
+
+-- Buttons
+local function createButton(text, yPos)
+    local btn = Instance.new("TextButton", Frame)
+    btn.Size = UDim2.new(0, 180, 0, 50)
+    btn.Position = UDim2.new(0, 20, 0, yPos)
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(0,0,0)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 16
+    btn.BackgroundColor3 = Color3.fromRGB(255,255,255)
+    btn.BorderSizePixel = 0
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
+    return btn
+end
+
+local TeleportButton = createButton("Teleport", 60)
+local KeybindButton = createButton("Keybind: [F]", 120)
+
+-- Saved Locations
+local spots = {
+    CFrame.new(-402.18, -6.34, 131.83) * CFrame.Angles(0, math.rad(-20.08), 0),
+    CFrame.new(-416.66, -6.34, -2.05) * CFrame.Angles(0, math.rad(-62.89), 0),
+    CFrame.new(-329.37, -4.68, 18.12) * CFrame.Angles(0, math.rad(-30.53), 0),
+}
+
+local REQUIRED_TOOL = "Flying Carpet"
+local teleportKey = Enum.KeyCode.F
+local waitingForKey = false
+
+-- Equip Tool
+local function equipFlyingCarpet()
+    local tool = char:FindFirstChild(REQUIRED_TOOL) or backpack:FindFirstChild(REQUIRED_TOOL)
+    if not tool then return false end
+    humanoid:EquipTool(tool)
+    repeat task.wait() until char:FindFirstChildOfClass("Tool") == tool
+    return true
+end
+
+-- Block Player
+local function blockPlayer(plr)
+    if not plr or plr == player then return end
+    pcall(function()
+        StarterGui:SetCore("PromptBlockPlayer", plr)
+    end)
+end
+
+-- Teleport Logic
+local function predatorTeleport()
+    if not equipFlyingCarpet() then return end
+
+    local target
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= player then
+            target = plr
+            break
+        end
+    end
+
+    for _, spot in ipairs(spots) do
+        hrp.CFrame = spot
+        task.wait(0.12)
+    end
+
+    if target then
+        blockPlayer(target)
+    end
+end
+
+TeleportButton.MouseButton1Click:Connect(predatorTeleport)
+
+KeybindButton.MouseButton1Click:Connect(function()
+    KeybindButton.Text = "Press a key..."
+    waitingForKey = true
+end)
+
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if waitingForKey and input.UserInputType == Enum.UserInputType.Keyboard then
+        teleportKey = input.KeyCode
+        KeybindButton.Text = "Keybind: [" .. teleportKey.Name .. "]"
+        waitingForKey = false
+    elseif input.KeyCode == teleportKey then
+        predatorTeleport()
+    end
+end)
